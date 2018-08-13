@@ -42,7 +42,7 @@ You need dependencies below.
 Clone the repo and install 3rd-party libraries.
 
 ```bash
-$ git clone https://www.github.com/ildoonet/tf-openpose
+$ git clone https://github.com/velociraptor111/tf-pose-estimation.git
 $ cd tf-openpose
 $ pip3 install -r requirements.txt
 ```
@@ -58,7 +58,7 @@ $ swig -python -c++ pafprocess.i && python3 setup.py build_ext --inplace
 Alternatively, you can install this repo as a shared package using pip.
 
 ```bash
-$ git clone https://www.github.com/ildoonet/tf-openpose
+$ git clone https://github.com/velociraptor111/tf-pose-estimation.git
 $ cd tf-openpose
 $ python setup.py install
 ```
