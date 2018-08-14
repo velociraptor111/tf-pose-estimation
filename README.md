@@ -42,7 +42,7 @@ Clone the repo and install 3rd-party libraries.
 
 ```bash
 $ git clone https://github.com/velociraptor111/tf-pose-estimation.git
-$ cd tf-openpose
+$ cd tf-pose-estimation
 $ pip3 install -r requirements.txt
 ```
 
@@ -58,7 +58,7 @@ Alternatively, you can install this repo as a shared package using pip.
 
 ```bash
 $ git clone https://github.com/velociraptor111/tf-pose-estimation.git
-$ cd tf-openpose
+$ cd tf-pose-estimation
 $ python setup.py install
 ```
 
