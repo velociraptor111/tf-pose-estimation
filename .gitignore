@@ -25,6 +25,11 @@ wheels/
 .installed.cfg
 *.egg
 .idea/
+.DS_Store
+*.cxx
+*.avi
+
+/svm_training
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -119,3 +124,6 @@ models/pretrained/resnet_v2_101/train.graph
 src/pafprocess/pafprocess.py
 src/pafprocess/pafprocess_wrap.cpp
 src/pafprocess/pafprocess_wrap.cxx
+
+# Model checkpoints
+/*.pkl
