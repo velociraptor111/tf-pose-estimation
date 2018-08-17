@@ -9,46 +9,52 @@ from scipy.spatial import distance
 from tf_pose import common
 import argparse
 
+
+### Average distances calculated ###
 constant_vals_dict = {}
+constant_vals_dict[0] = 0.08606471351014493
+constant_vals_dict[1] = 0.0
 constant_vals_dict[2] = 0.026407283590116293
 constant_vals_dict[3] = 0.1587968211930503
 constant_vals_dict[4] = 0.26106975708085106
+constant_vals_dict[5] = 0.021211341402898553
 constant_vals_dict[6] = 0.17225851005610576
 constant_vals_dict[7] = 0.2688328088482758
+constant_vals_dict[8] =0.2737839816086956
 constant_vals_dict[9] = 0.43228599890116287
 constant_vals_dict[10] = 0.6107515406413992
+constant_vals_dict[11] = 0.2805108925623188
+constant_vals_dict[12] = 0.4341653366521739
 constant_vals_dict[13] = 0.6192064038720931
 
 
-def get_l2_vector(human,remove_idx=[]):
-    human = human[0] # assume only one human
-    # print(human.body_parts.keys())
-    anchor_body_part_id = 1 # ID of the neck
-    anchor_body_part_vector = [human.body_parts[anchor_body_part_id].x,human.body_parts[anchor_body_part_id].y]
+def get_l2_vector(humans,remove_idx=[]):
+    total_l2_vector_dict = {}
 
-    if anchor_body_part_id not in human.body_parts.keys():
-        assert 1 == 2 # Neck is not detected
+    for human_id,human in enumerate(humans):
+        anchor_body_part_id = 1 # ID of the neck
+        print(human.body_parts)
+        if anchor_body_part_id in human.body_parts:   #Check if neck is in the detection of openpose
+            anchor_body_part_vector = [human.body_parts[anchor_body_part_id].x,human.body_parts[anchor_body_part_id].y]
 
-    l2_vector_array = []
-    for i in range(common.CocoPart.Background.value):
-        if i not in human.body_parts.keys():
-            l2_vector_array.append('NAN')
-        else:
-            body_part = human.body_parts[i]
-            l2_distance  = distance.euclidean(anchor_body_part_vector, [body_part.x,body_part.y])
-            # print([body_part.x,body_part.y])
-            l2_vector_array.append(l2_distance)
+            if anchor_body_part_id not in human.body_parts.keys():
+                assert 1 == 2 # Neck is not detected
 
-    print(l2_vector_array)
+            l2_vector_array = []
+            for i in range(common.CocoPart.Background.value):
+                if i not in human.body_parts.keys():
+                    l2_vector_array.append('NAN')
+                else:
+                    body_part = human.body_parts[i]
+                    l2_distance  = distance.euclidean(anchor_body_part_vector, [body_part.x,body_part.y])
+                    # print([body_part.x,body_part.y])
+                    l2_vector_array.append(l2_distance)
 
-    l2_vector_array = np.array(l2_vector_array)
-    l2_vector_array = np.delete(l2_vector_array,remove_idx)
-    # for removal_id in remove_idx:
-    #     print(removal_id)
-        # l2_vector_array.pop(removal_id)
+            l2_vector_array = np.array(l2_vector_array)
+            l2_vector_array = np.delete(l2_vector_array,remove_idx)
+            total_l2_vector_dict[human_id] = l2_vector_array
 
-
-    return l2_vector_array
+    return total_l2_vector_dict
 
 def post_process_l2_vector(l2_vector_arr):
     '''
@@ -59,7 +65,7 @@ def post_process_l2_vector(l2_vector_arr):
 
     l2_vector_arr_numpy = np.array(l2_vector_arr)
     index_nan = np.where(l2_vector_arr_numpy == "NAN")
-    print(index_nan)
+
     for idx in index_nan[0]:
         if idx not in constant_vals_dict.keys():
             print("Never seen this nan variable within column: ", idx)
@@ -79,6 +85,10 @@ if __name__ == "__main__":
     parser.add_argument("--path_to_video",default='./test_video/time_up_go_one_person.mp4',help="Specify the path to your video")
     args = parser.parse_args()
 
+
+    '''
+        Tensorflow Graph declaration here 
+    '''
     w, h = model_wh("432x368")
     model = "mobilenet_thin"
     if w > 0 and h > 0:
@@ -108,28 +118,40 @@ if __name__ == "__main__":
     while cap.isOpened():
         ret_val, image = cap.read()
 
-        human = e.inference(image, resize_to_default=(w > 0 and h > 0), upsample_size=resize_out_ratio)
-        l2_vector_arr = get_l2_vector(human, remove_idx=[14, 15, 16, 17])
-        post_process_l2_vector(l2_vector_arr)
-        l2_vector_arr = np.expand_dims(l2_vector_arr,axis=0)
-        prediction_score = classify_pose(l2_vector_arr, svm_classifier)
-        print(prediction_score)
-        score_string = ""
-        if prediction_score[0] == 0:
-            print("Sitting")
-            score_string="Sitting"
-        elif prediction_score[0] == 1:
-            print("Standing")
-            score_string="Standing"
+        humans = e.inference(image, resize_to_default=(w > 0 and h > 0), upsample_size=resize_out_ratio)
+        total_l2_vector_dict = get_l2_vector(humans, remove_idx=[14, 15, 16, 17])
+
+        prediction_dictionary = {}
+        for human_id in total_l2_vector_dict:
+
+            l2_vector_arr = total_l2_vector_dict[human_id]
+            post_process_l2_vector(l2_vector_arr)
+
+            l2_vector_arr = np.expand_dims(l2_vector_arr,axis=0)
+
+            prediction_scores = classify_pose(l2_vector_arr, svm_classifier)
+
+            for prediction_score in prediction_scores:
+                if prediction_score == 0:
+                    prediction_dictionary[human_id] = "Sitting"
+
+                elif prediction_score == 1:
+                    prediction_dictionary[human_id] = "Standing"
+
 
         ### Drawing to the image ###
         image_h, image_w = image.shape[:2]
 
-        neck_part = human[0].body_parts[1] #neck location
-        image = TfPoseEstimator.draw_humans(image, human, imgcopy=False)
-        cv2.putText(image, score_string, (max(0,int((neck_part.x * image_w) - 150)), max(0,int((neck_part.y * image_h) - 100))), cv2.FONT_HERSHEY_SIMPLEX, 1.1,
-                    (0, 0, 255), 2)
+        image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
 
+
+        for human_id,human in enumerate(humans):
+            # If the person has no neck, then we know that there must also be NO prediction.
+            if human_id in prediction_dictionary:
+                neck_part = human.body_parts[1]
+                cv2.putText(image, prediction_dictionary[human_id], (max(0,int((neck_part.x * image_w) - 150)), max(0,int((neck_part.y * image_h) - 100))), cv2.FONT_HERSHEY_SIMPLEX, 1.1,
+                            (0, 0, 255), 2)
+     
         if args.save_video == 1:
             out.write(image)
         else:
@@ -137,6 +159,7 @@ if __name__ == "__main__":
             if cv2.waitKey(1) == 27:
                 break
 
+    print("DONE Processing the video")
     cap.release()
     cv2.destroyAllWindows()
 

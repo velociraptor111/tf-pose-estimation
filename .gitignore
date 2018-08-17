@@ -127,3 +127,5 @@ src/pafprocess/pafprocess_wrap.cxx
 
 # Model checkpoints
 /*.pkl
+
+test_video
